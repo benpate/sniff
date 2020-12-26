@@ -79,7 +79,7 @@ func UserAgent(userAgent string) BrowserInfo {
 	} else if strings.Contains(userAgent, "Opera") {
 		result.Browser = "Opera"
 	} else {
-		result.Browser = "Unknown Browser"
+		result.Browser = "Unknown"
 	}
 
 	return result
