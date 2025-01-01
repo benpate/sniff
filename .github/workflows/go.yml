@@ -27,5 +27,4 @@ jobs:
     - name: Upload Coverage Report to codecov.io
       uses: codecov/codecov-action@v2
       with:
-          file: ./coverage.txt
-          flags: unittests
+            flags: unittests
