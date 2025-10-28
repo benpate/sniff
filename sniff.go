@@ -8,16 +8,18 @@ func UserAgent(userAgent string) BrowserInfo {
 
 	var result BrowserInfo
 
+	userAgent = strings.ToLower(userAgent)
+
 	// Sniff Device OS
-	if strings.Contains(userAgent, "Macintosh") {
+	if strings.Contains(userAgent, "macintosh") {
 		result.IsMacintosh = true
 		result.IsDesktop = true
 		result.Device = "desktop"
 		result.Description = "Macintosh PC"
 
-	} else if strings.Contains(userAgent, "Windows") {
+	} else if strings.Contains(userAgent, "windows") {
 
-		if strings.Contains(userAgent, "Mobile") {
+		if strings.Contains(userAgent, "mobile") {
 			result.IsWindows = true
 			result.IsPhone = true
 			result.Device = "phone"
@@ -30,21 +32,21 @@ func UserAgent(userAgent string) BrowserInfo {
 			result.Description = "Windows PC"
 		}
 
-	} else if strings.Contains(userAgent, "iPhone") {
+	} else if strings.Contains(userAgent, "iphone") {
 		result.IsPhone = true
 		result.IsIOS = true
 		result.Device = "phone"
 		result.Description = "iPhone"
 
-	} else if strings.Contains(userAgent, "iPad") {
+	} else if strings.Contains(userAgent, "ipad") {
 		result.IsTablet = true
 		result.IsIOS = true
 		result.Device = "tablet"
 		result.Description = "iPad"
 
-	} else if strings.Contains(userAgent, "Android") {
+	} else if strings.Contains(userAgent, "android") {
 
-		if strings.Contains(userAgent, "Mobile") {
+		if strings.Contains(userAgent, "mobile") {
 			result.IsAndroid = true
 			result.IsPhone = true
 			result.Device = "phone"
@@ -57,7 +59,7 @@ func UserAgent(userAgent string) BrowserInfo {
 			result.Description = "Android Tablet"
 		}
 
-	} else if strings.Contains(userAgent, "Blackberry") {
+	} else if strings.Contains(userAgent, "blackberry") {
 		result.IsPhone = true
 		result.Device = "phone"
 		result.Description = "Blackberry Phone"
@@ -68,7 +70,7 @@ func UserAgent(userAgent string) BrowserInfo {
 	}
 
 	// Sniff Browser Info
-	if strings.Contains(userAgent, "Firefox") {
+	if strings.Contains(userAgent, "firefox") {
 		result.Browser = "Firefox"
 	} else if strings.Contains(userAgent, "Chrome") {
 		result.Browser = "Chrome"
@@ -80,6 +82,10 @@ func UserAgent(userAgent string) BrowserInfo {
 		result.Browser = "Opera"
 	} else {
 		result.Browser = "Unknown"
+	}
+
+	if strings.Contains(userAgent, "mobile") {
+		result.IsPhone = true
 	}
 
 	return result
