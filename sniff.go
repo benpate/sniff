@@ -72,13 +72,13 @@ func UserAgent(userAgent string) BrowserInfo {
 	// Sniff Browser Info
 	if strings.Contains(userAgent, "firefox") {
 		result.Browser = "Firefox"
-	} else if strings.Contains(userAgent, "Chrome") {
+	} else if strings.Contains(userAgent, "chrome") {
 		result.Browser = "Chrome"
-	} else if strings.Contains(userAgent, "Safari") {
+	} else if strings.Contains(userAgent, "safari") {
 		result.Browser = "Safari"
-	} else if strings.Contains(userAgent, "MSIE") {
+	} else if strings.Contains(userAgent, "msie") {
 		result.Browser = "MSIE"
-	} else if strings.Contains(userAgent, "Opera") {
+	} else if strings.Contains(userAgent, "opera") {
 		result.Browser = "Opera"
 	} else {
 		result.Browser = "Unknown"

@@ -125,14 +125,9 @@ func TestUserAgent_MobileFlagForcesPhone(t *testing.T) {
 	assert.True(t, result.IsPhone)
 }
 
-// TestUserAgent_Browser verifies the browser-sniffing branches.
-//
-// NOTE: UserAgent lowercases the input at the top of the function, but the
-// Chrome/Safari/MSIE/Opera branches compare against capitalized literals
-// ("Chrome", "Safari", "MSIE", "Opera"). Those four branches are therefore
-// UNREACHABLE and every non-Firefox agent falls through to "Unknown". The
-// cases below document the behavior as it actually is, not as the literals
-// suggest it was intended.
+// TestUserAgent_Browser verifies the browser-sniffing branches. The input is
+// lowercased before matching, so the keyword comparisons are case-insensitive
+// and every named branch is reachable.
 func TestUserAgent_Browser(t *testing.T) {
 
 	check := func(name string, userAgent string, expectedBrowser string) {
@@ -142,14 +137,18 @@ func TestUserAgent_Browser(t *testing.T) {
 		})
 	}
 
-	// Firefox is the only reachable named branch ("firefox" lowercase).
 	check("Firefox", "Mozilla/5.0 Firefox/100.0", "Firefox")
+	check("Safari", "Mozilla/5.0 (Macintosh) Version/15.0 Safari/605.1.15", "Safari")
+	check("MSIE", "Mozilla/5.0 (Windows NT 6.1) MSIE 9.0", "MSIE")
+	check("Opera", "Mozilla/5.0 Opera/12.16", "Opera")
 
-	// The following all fall through to "Unknown" because of the lowercase bug.
-	check("Chrome falls through to Unknown", "Mozilla/5.0 Chrome/100.0", "Unknown")
-	check("Safari falls through to Unknown", "Mozilla/5.0 Safari/600.0", "Unknown")
-	check("MSIE falls through to Unknown", "Mozilla/5.0 MSIE 9.0", "Unknown")
-	check("Opera falls through to Unknown", "Mozilla/5.0 Opera/12.0", "Unknown")
+	// Real Chrome user agents contain both "chrome" and "safari"; because the
+	// Chrome branch is checked first, they are correctly reported as Chrome.
+	check("Chrome", "Mozilla/5.0 (Windows NT 10.0) Chrome/100.0 Safari/537.36", "Chrome")
+
+	// Matching is case-insensitive thanks to the lowercasing.
+	check("Lowercase chrome", "mozilla/5.0 chrome/100.0", "Chrome")
+
 	check("No browser keyword", "some random string", "Unknown")
 }
 
