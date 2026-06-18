@@ -1,6 +1,6 @@
 package sniff
 
-// BrowserInfo contains all of the information that  we can extract from the UserAgent string.
+// BrowserInfo contains the information we can extract from a User-Agent string.
 type BrowserInfo struct {
 	Device      string
 	IsDesktop   bool

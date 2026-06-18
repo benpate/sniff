@@ -46,7 +46,7 @@ func TestUserAgent_Devices(t *testing.T) {
 		Device:      "phone",
 		IsPhone:     true,
 		IsWindows:   true,
-		Browser:     "Chrome",
+		Browser:     "Edge", // legacy EdgeHTML "Edge/..." token matches the "edg" keyword
 		Description: "Windows Phone",
 	})
 
@@ -82,11 +82,14 @@ func TestUserAgent_Devices(t *testing.T) {
 		Description: "Android Tablet",
 	})
 
-	check("Blackberry", "Mozilla/5.0 (BlackBerry; U; BlackBerry 9900; en) AppleWebKit/534.11+ (KHTML, like Gecko) Version/7.1.0.346 Mobile Safari/534.11+", BrowserInfo{
-		Device:      "phone",
-		IsPhone:     true,
+	// Blackberry is no longer detected (effectively 0% usage); its UA now falls
+	// through to Unrecognized. The "Mobile" token does NOT force a phone, since
+	// device classification is authoritative.
+	check("Blackberry now unrecognized", "Mozilla/5.0 (BlackBerry; U; BlackBerry 9900; en) AppleWebKit/534.11+ (KHTML, like Gecko) Version/7.1.0.346 Mobile Safari/534.11+", BrowserInfo{
+		Device:      "desktop",
+		IsDesktop:   true,
 		Browser:     "Safari",
-		Description: "Blackberry Phone",
+		Description: "Unrecognized Device",
 	})
 
 	check("Unrecognized", "some random crawler/1.0", BrowserInfo{
@@ -152,12 +155,18 @@ func TestUserAgent_Browser(t *testing.T) {
 	// Genuine, real-world user-agent strings for each browser.
 	check("Firefox", "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/115.0", "Firefox")
 	check("Safari", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.3 Safari/605.1.15", "Safari")
-	check("MSIE", "Mozilla/5.0 (compatible; MSIE 9.0; Windows NT 6.1; Trident/5.0)", "MSIE")
-	check("Opera", "Opera/9.80 (Windows NT 6.0) Presto/2.12.388 Version/12.14", "Opera")
 
-	// Real Chrome user agents contain both "Chrome" and "Safari"; because the
-	// Chrome branch is checked first, they are correctly reported as Chrome.
+	// Chromium-based browsers all carry "Chrome" (and "Safari") in their UA, so
+	// each must be matched by its own more-specific token BEFORE Chrome.
 	check("Chrome", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36", "Chrome")
+	check("Edge", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36 Edg/110.0.1587.69", "Edge")
+	check("Edge iOS", "Mozilla/5.0 (iPhone; CPU iPhone OS 16_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.3 EdgiOS/110.0.1587.60 Mobile/15E148 Safari/604.1", "Edge")
+	check("Samsung Internet", "Mozilla/5.0 (Linux; Android 13; SM-S901B) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/20.0 Chrome/110.0.0.0 Mobile Safari/537.36", "Samsung Internet")
+	check("Vivaldi", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36 Vivaldi/5.7.2921.63", "Vivaldi")
+
+	// Modern Opera identifies itself with "OPR/"; legacy Presto Opera with "Opera".
+	check("Opera modern (OPR)", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36 OPR/96.0.0.0", "Opera")
+	check("Opera legacy (Presto)", "Opera/9.80 (Windows NT 6.0) Presto/2.12.388 Version/12.14", "Opera")
 
 	check("No browser keyword", "some random string", "Unknown")
 }
@@ -194,9 +203,6 @@ func TestSniffDevice(t *testing.T) {
 	check("Android Tablet", "android", BrowserInfo{
 		IsAndroid: true, IsTablet: true, Device: "tablet", Description: "Android Tablet",
 	})
-	check("Blackberry", "blackberry", BrowserInfo{
-		IsPhone: true, Device: "phone", Description: "Blackberry Phone",
-	})
 	check("Unrecognized", "unknown", BrowserInfo{
 		IsDesktop: true, Device: "desktop", Description: "Unrecognized Device",
 	})
@@ -227,11 +233,15 @@ func TestSniffBrowser(t *testing.T) {
 
 	// Genuine user-agent strings (lowercased, as UserAgent would pass them).
 	check("Firefox", "mozilla/5.0 (windows nt 10.0; win64; x64; rv:109.0) gecko/20100101 firefox/115.0", "Firefox")
-	// A real Chrome UA contains both "chrome" and "safari"; chrome wins.
-	check("Chrome", "mozilla/5.0 (windows nt 10.0; win64; x64) applewebkit/537.36 (khtml, like gecko) chrome/110.0.0.0 safari/537.36", "Chrome")
 	check("Safari", "mozilla/5.0 (macintosh; intel mac os x 10_15_7) applewebkit/605.1.15 (khtml, like gecko) version/16.3 safari/605.1.15", "Safari")
-	check("MSIE", "mozilla/5.0 (compatible; msie 9.0; windows nt 6.1; trident/5.0)", "MSIE")
-	check("Opera", "opera/9.80 (windows nt 6.0) presto/2.12.388 version/12.14", "Opera")
+
+	// Chromium-based browsers all carry "chrome" + "safari"; the more-specific
+	// token must win. These cases guard the priority ordering of the table.
+	check("Chrome", "mozilla/5.0 (windows nt 10.0; win64; x64) applewebkit/537.36 (khtml, like gecko) chrome/110.0.0.0 safari/537.36", "Chrome")
+	check("Edge wins over Chrome", "mozilla/5.0 (windows nt 10.0; win64; x64) applewebkit/537.36 (khtml, like gecko) chrome/110.0.0.0 safari/537.36 edg/110.0.1587.69", "Edge")
+	check("Samsung wins over Chrome", "mozilla/5.0 (linux; android 13; sm-s901b) applewebkit/537.36 (khtml, like gecko) samsungbrowser/20.0 chrome/110.0.0.0 mobile safari/537.36", "Samsung Internet")
+	check("Vivaldi wins over Chrome", "mozilla/5.0 (windows nt 10.0; win64; x64) applewebkit/537.36 (khtml, like gecko) chrome/110.0.0.0 safari/537.36 vivaldi/5.7.2921.63", "Vivaldi")
+	check("Opera OPR wins over Chrome", "mozilla/5.0 (windows nt 10.0; win64; x64) applewebkit/537.36 (khtml, like gecko) chrome/110.0.0.0 safari/537.36 opr/96.0.0.0", "Opera")
 	check("Unknown", "some random string", "Unknown")
 }
 
