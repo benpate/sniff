@@ -2,91 +2,75 @@ package sniff
 
 import "strings"
 
+// browsers maps a user-agent keyword to its browser label, in priority order.
+// Chrome must precede Safari because Chrome user agents contain both keywords.
+var browsers = []struct {
+	keyword string
+	name    string
+}{
+	{"firefox", "Firefox"},
+	{"chrome", "Chrome"},
+	{"safari", "Safari"},
+	{"msie", "MSIE"},
+	{"opera", "Opera"},
+}
+
 // UserAgent scans the browser's useragent string.
 // Remember, kids: Browser sniffing = bad bad bad.  You should never do it.
 func UserAgent(userAgent string) BrowserInfo {
 
-	var result BrowserInfo
-
 	userAgent = strings.ToLower(userAgent)
 
-	// Sniff Device OS
-	if strings.Contains(userAgent, "macintosh") {
-		result.IsMacintosh = true
-		result.IsDesktop = true
-		result.Device = "desktop"
-		result.Description = "Macintosh PC"
-
-	} else if strings.Contains(userAgent, "windows") {
-
-		if strings.Contains(userAgent, "mobile") {
-			result.IsWindows = true
-			result.IsPhone = true
-			result.Device = "phone"
-			result.Description = "Windows Phone"
-
-		} else {
-			result.IsWindows = true
-			result.IsDesktop = true
-			result.Device = "desktop"
-			result.Description = "Windows PC"
-		}
-
-	} else if strings.Contains(userAgent, "iphone") {
-		result.IsPhone = true
-		result.IsIOS = true
-		result.Device = "phone"
-		result.Description = "iPhone"
-
-	} else if strings.Contains(userAgent, "ipad") {
-		result.IsTablet = true
-		result.IsIOS = true
-		result.Device = "tablet"
-		result.Description = "iPad"
-
-	} else if strings.Contains(userAgent, "android") {
-
-		if strings.Contains(userAgent, "mobile") {
-			result.IsAndroid = true
-			result.IsPhone = true
-			result.Device = "phone"
-			result.Description = "Android Phone"
-
-		} else {
-			result.IsAndroid = true
-			result.IsTablet = true
-			result.Device = "tablet"
-			result.Description = "Android Tablet"
-		}
-
-	} else if strings.Contains(userAgent, "blackberry") {
-		result.IsPhone = true
-		result.Device = "phone"
-		result.Description = "Blackberry Phone"
-	} else {
-		result.IsDesktop = true
-		result.Device = "desktop"
-		result.Description = "Unrecognized Device"
-	}
-
-	// Sniff Browser Info
-	if strings.Contains(userAgent, "firefox") {
-		result.Browser = "Firefox"
-	} else if strings.Contains(userAgent, "chrome") {
-		result.Browser = "Chrome"
-	} else if strings.Contains(userAgent, "safari") {
-		result.Browser = "Safari"
-	} else if strings.Contains(userAgent, "msie") {
-		result.Browser = "MSIE"
-	} else if strings.Contains(userAgent, "opera") {
-		result.Browser = "Opera"
-	} else {
-		result.Browser = "Unknown"
-	}
-
-	if strings.Contains(userAgent, "mobile") {
-		result.IsPhone = true
-	}
+	result := sniffDevice(userAgent)
+	result.Browser = sniffBrowser(userAgent)
 
 	return result
+}
+
+// sniffDevice determines the device/OS fields from a lowercased user agent.
+func sniffDevice(userAgent string) BrowserInfo {
+
+	isMobile := strings.Contains(userAgent, "mobile")
+
+	switch {
+
+	case strings.Contains(userAgent, "macintosh"):
+		return BrowserInfo{IsMacintosh: true, IsDesktop: true, Device: "desktop", Description: "Macintosh PC"}
+
+	case strings.Contains(userAgent, "windows"):
+		if isMobile {
+			return BrowserInfo{IsWindows: true, IsPhone: true, Device: "phone", Description: "Windows Phone"}
+		}
+		return BrowserInfo{IsWindows: true, IsDesktop: true, Device: "desktop", Description: "Windows PC"}
+
+	case strings.Contains(userAgent, "iphone"):
+		return BrowserInfo{IsPhone: true, IsIOS: true, Device: "phone", Description: "iPhone"}
+
+	case strings.Contains(userAgent, "ipad"):
+		return BrowserInfo{IsTablet: true, IsIOS: true, Device: "tablet", Description: "iPad"}
+
+	case strings.Contains(userAgent, "android"):
+		if isMobile {
+			return BrowserInfo{IsAndroid: true, IsPhone: true, Device: "phone", Description: "Android Phone"}
+		}
+		return BrowserInfo{IsAndroid: true, IsTablet: true, Device: "tablet", Description: "Android Tablet"}
+
+	case strings.Contains(userAgent, "blackberry"):
+		return BrowserInfo{IsPhone: true, Device: "phone", Description: "Blackberry Phone"}
+
+	default:
+		return BrowserInfo{IsDesktop: true, Device: "desktop", Description: "Unrecognized Device"}
+	}
+}
+
+// sniffBrowser determines the browser name from a lowercased user agent.
+func sniffBrowser(userAgent string) string {
+
+	for _, browser := range browsers {
+		if strings.Contains(userAgent, browser.keyword) {
+			return browser.name
+		}
+	}
+
+	return "Unknown"
 }
