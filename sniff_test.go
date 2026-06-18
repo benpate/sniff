@@ -1,6 +1,7 @@
 package sniff
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -138,6 +139,31 @@ func TestUserAgent_MobileTokenDoesNotOverrideDevice(t *testing.T) {
 	assert.Equal(t, "tablet", ipad.Device)
 	assert.True(t, ipad.IsTablet)
 	assert.False(t, ipad.IsPhone, "an iPad must not be reported as a phone")
+}
+
+// TestUserAgent_CaseInsensitive verifies that detection is independent of the
+// casing of the input: the same UA in lower, UPPER, and mixed case must all
+// produce identical results. This is the contract IsMobile relies on.
+func TestUserAgent_CaseInsensitive(t *testing.T) {
+
+	const canonical = "Mozilla/5.0 (Linux; Android 13; Pixel 6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Mobile Safari/537.36"
+
+	expected := UserAgent(canonical)
+
+	check := func(name string, userAgent string) {
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, expected, UserAgent(userAgent))
+		})
+	}
+
+	check("lowercase", strings.ToLower(canonical))
+	check("UPPERCASE", strings.ToUpper(canonical))
+	check("MiXeD cAsE", "MoZiLlA/5.0 (LiNuX; AnDrOiD 13; PiXeL 6) AppleWebKit/537.36 (KHTML, like Gecko) ChRoMe/110.0.0.0 MoBiLe SaFaRi/537.36")
+
+	// Sanity check: the canonical result is the Android-phone/Chrome we expect,
+	// so the cases above are asserting against a meaningful value, not a zero one.
+	assert.Equal(t, "Android Phone", expected.Description)
+	assert.Equal(t, "Chrome", expected.Browser)
 }
 
 // TestUserAgent_Browser verifies the browser-sniffing branches. The input is

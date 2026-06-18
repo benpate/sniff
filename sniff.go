@@ -6,12 +6,6 @@ package sniff
 import "strings"
 
 // browsers maps a user-agent keyword to its browser label, in priority order.
-//
-// Order matters: modern browsers impersonate each other in their user agents,
-// so the table must run from most-specific to least-specific. For example,
-// Edge, Samsung Internet, and Vivaldi all carry "Chrome" (and usually "Safari")
-// in their UA, so they must be matched BEFORE Chrome; Chrome in turn carries
-// "Safari" and must be matched before Safari.
 var browsers = []struct {
 	keyword string
 	name    string
@@ -26,7 +20,7 @@ var browsers = []struct {
 	{"safari", "Safari"},
 }
 
-// UserAgent scans the browser's useragent string.
+// UserAgent inspects a User-Agent string and returns the device and browser it identifies.
 // Remember, kids: Browser sniffing = bad bad bad.  You should never do it.
 func UserAgent(userAgent string) BrowserInfo {
 
@@ -71,6 +65,11 @@ func sniffDevice(userAgent string) BrowserInfo {
 
 // sniffBrowser determines the browser name from a lowercased user agent.
 func sniffBrowser(userAgent string) string {
+
+	// Order matters: modern browsers impersonate each other in their user
+	// agents, so the table runs most-specific to least-specific. Edge, Samsung
+	// Internet, and Vivaldi all carry "chrome"/"safari" and must be matched
+	// before chrome; chrome carries "safari" and is matched before safari.
 
 	for _, browser := range browsers {
 		if strings.Contains(userAgent, browser.keyword) {
