@@ -11,6 +11,5 @@ type BrowserInfo struct {
 	IsIOS       bool
 	IsAndroid   bool
 	Browser     string
-	Version     string
 	Description string
 }

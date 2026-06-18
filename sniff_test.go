@@ -245,13 +245,6 @@ func TestSniffBrowser(t *testing.T) {
 	check("Unknown", "some random string", "Unknown")
 }
 
-// TestUserAgent_VersionUnset documents that the Version field is never
-// populated by the current implementation.
-func TestUserAgent_VersionUnset(t *testing.T) {
-	result := UserAgent("Mozilla/5.0 (Macintosh) Firefox/100.0")
-	assert.Equal(t, "", result.Version)
-}
-
 // FuzzUserAgent ensures UserAgent never panics on arbitrary input. UserAgent
 // parses an externally-supplied string, so it is exactly the kind of function
 // the checklist calls for fuzzing.
