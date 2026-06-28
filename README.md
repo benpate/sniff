@@ -21,7 +21,9 @@ info := sniff.UserAgent(request.Header.Get("User-Agent"))
 
 - **Device classification is authoritative; a bare `mobile` token never overrides it.** `sniffDevice` decides the device from the OS keyword (`ipad` → tablet, `iphone` → phone, etc.), *then* the browser is filled in. An iPad UA contains `Mobile/15E148` but must stay a tablet — don't add a top-level "contains mobile → phone" rule, it would corrupt tablets into phones.
 
-- **Branch order in `sniffDevice` is load-bearing.** `macintosh` is checked before `windows` (Safari-on-Mac UAs can mention both); `windows`/`android` consult the `mobile` token only *within* their own branch to split phone vs. desktop/tablet.
+- **Branch order in `sniffDevice` is load-bearing.** `macintosh` is checked before `windows` (Safari-on-Mac UAs can mention both); `windows`/`android` consult the `mobile` token only *within* their own branch to split phone vs. desktop/tablet. Critically, **`cros` (ChromeOS) and `android` are matched before the generic `linux` branch**, because all three carry `linux` in their UA — reordering would misclassify ChromeOS and Android as plain Linux desktops.
+
+- **`Description` is display-only, not an API value.** It is human-readable prose (e.g. "iPhone", "Linux PC") and may change. The stable contract callers should switch on is `Device` (`desktop`/`tablet`/`phone`) plus the `Is*` booleans.
 
 - **Everything is matched against a lowercased UA.** `UserAgent` lowercases once up front, so every keyword in the tables is lowercase and matching is case-insensitive. `IsMobile`/`IsDesktop` route through `UserAgent`, so the three never disagree — a contract the tests pin explicitly.
 
