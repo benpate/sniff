@@ -52,11 +52,21 @@ func sniffDevice(userAgent string) BrowserInfo {
 	case strings.Contains(userAgent, "ipad"):
 		return BrowserInfo{IsTablet: true, IsIOS: true, Device: "tablet", Description: "iPad"}
 
+	// ChromeOS UAs contain "CrOS"; check before "android" because both are
+	// Linux-based, and before the generic "linux" branch below.
+	case strings.Contains(userAgent, "cros"):
+		return BrowserInfo{IsChromeOS: true, IsDesktop: true, Device: "desktop", Description: "ChromeOS"}
+
 	case strings.Contains(userAgent, "android"):
 		if isMobile {
 			return BrowserInfo{IsAndroid: true, IsPhone: true, Device: "phone", Description: "Android Phone"}
 		}
 		return BrowserInfo{IsAndroid: true, IsTablet: true, Device: "tablet", Description: "Android Tablet"}
+
+	// Generic desktop Linux. Must come AFTER android and cros, since those
+	// platforms also carry "linux" in their user agents.
+	case strings.Contains(userAgent, "linux"):
+		return BrowserInfo{IsLinux: true, IsDesktop: true, Device: "desktop", Description: "Linux PC"}
 
 	default:
 		return BrowserInfo{IsDesktop: true, Device: "desktop", Description: "Unrecognized Device"}

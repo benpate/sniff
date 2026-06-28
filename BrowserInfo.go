@@ -10,6 +10,12 @@ type BrowserInfo struct {
 	IsMacintosh bool   // TRUE for Apple macOS
 	IsIOS       bool   // TRUE for Apple iOS (iPhone or iPad)
 	IsAndroid   bool   // TRUE for Android
+	IsChromeOS  bool   // TRUE for ChromeOS
+	IsLinux     bool   // TRUE for desktop Linux (excludes Android and ChromeOS)
 	Browser     string // Browser name (e.g. "Chrome"), or "Unknown"
-	Description string // Human-friendly device summary (e.g. "iPhone")
+
+	// Description is a human-readable summary (e.g. "iPhone") for display only.
+	// It is NOT a stable API value -- do not switch on it; use Device and the
+	// Is* booleans instead, which are the stable contract.
+	Description string
 }

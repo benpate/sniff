@@ -83,6 +83,22 @@ func TestUserAgent_Devices(t *testing.T) {
 		Description: "Android Tablet",
 	})
 
+	check("Linux desktop", "Mozilla/5.0 (X11; Linux x86_64; rv:109.0) Gecko/20100101 Firefox/115.0", BrowserInfo{
+		Device:      "desktop",
+		IsDesktop:   true,
+		IsLinux:     true,
+		Browser:     "Firefox",
+		Description: "Linux PC",
+	})
+
+	check("ChromeOS", "Mozilla/5.0 (X11; CrOS x86_64 14541.0.0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36", BrowserInfo{
+		Device:      "desktop",
+		IsDesktop:   true,
+		IsChromeOS:  true,
+		Browser:     "Chrome",
+		Description: "ChromeOS",
+	})
+
 	// Blackberry is no longer detected (effectively 0% usage); its UA now falls
 	// through to Unrecognized. The "Mobile" token does NOT force a phone, since
 	// device classification is authoritative.
@@ -229,8 +245,24 @@ func TestSniffDevice(t *testing.T) {
 	check("Android Tablet", "android", BrowserInfo{
 		IsAndroid: true, IsTablet: true, Device: "tablet", Description: "Android Tablet",
 	})
+	check("ChromeOS", "cros", BrowserInfo{
+		IsChromeOS: true, IsDesktop: true, Device: "desktop", Description: "ChromeOS",
+	})
+	check("Linux desktop", "linux", BrowserInfo{
+		IsLinux: true, IsDesktop: true, Device: "desktop", Description: "Linux PC",
+	})
 	check("Unrecognized", "unknown", BrowserInfo{
 		IsDesktop: true, Device: "desktop", Description: "Unrecognized Device",
+	})
+
+	// ChromeOS contains "linux" too, but must be classified as ChromeOS (the
+	// cros branch comes first). This guards that branch ordering.
+	check("ChromeOS not plain Linux", "x11; cros x86_64 14541.0.0", BrowserInfo{
+		IsChromeOS: true, IsDesktop: true, Device: "desktop", Description: "ChromeOS",
+	})
+	// Android contains "linux" too, but must stay Android (android branch first).
+	check("Android not plain Linux", "linux; android 13; pixel 6 mobile", BrowserInfo{
+		IsAndroid: true, IsPhone: true, Device: "phone", Description: "Android Phone",
 	})
 
 	// Real-world round-trips (lowercased, as UserAgent would pass them). These
