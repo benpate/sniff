@@ -72,7 +72,7 @@ func FuzzIsMobile(f *testing.F) {
 	f.Add("Android")
 	f.Add("Mozilla/5.0 (Macintosh)")
 
-	f.Fuzz(func(t *testing.T, userAgent string) {
+	f.Fuzz(func(_ *testing.T, userAgent string) {
 		// Must not panic; the result is a plain bool.
 		_ = IsMobile(userAgent)
 	})
