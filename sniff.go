@@ -35,29 +35,29 @@ func UserAgent(userAgent string) BrowserInfo {
 // sniffDevice determines the device/OS fields from a lowercased user agent.
 func sniffDevice(userAgent string) BrowserInfo {
 
-	switch isMobile := strings.Contains(userAgent, "mobile"); {
+	switch isMobile := hasToken(userAgent, "mobile"); {
 
-	case strings.Contains(userAgent, "macintosh"):
+	case hasToken(userAgent, "macintosh"):
 		return BrowserInfo{IsMacintosh: true, IsDesktop: true, Device: "desktop", Description: "Macintosh PC"}
 
-	case strings.Contains(userAgent, "windows"):
+	case hasToken(userAgent, "windows"):
 		if isMobile {
 			return BrowserInfo{IsWindows: true, IsPhone: true, Device: "phone", Description: "Windows Phone"}
 		}
 		return BrowserInfo{IsWindows: true, IsDesktop: true, Device: "desktop", Description: "Windows PC"}
 
-	case strings.Contains(userAgent, "iphone"):
+	case hasToken(userAgent, "iphone"):
 		return BrowserInfo{IsPhone: true, IsIOS: true, Device: "phone", Description: "iPhone"}
 
-	case strings.Contains(userAgent, "ipad"):
+	case hasToken(userAgent, "ipad"):
 		return BrowserInfo{IsTablet: true, IsIOS: true, Device: "tablet", Description: "iPad"}
 
 	// ChromeOS UAs contain "CrOS"; check before "android" because both are
 	// Linux-based, and before the generic "linux" branch below.
-	case strings.Contains(userAgent, "cros"):
+	case hasToken(userAgent, "cros"):
 		return BrowserInfo{IsChromeOS: true, IsDesktop: true, Device: "desktop", Description: "ChromeOS"}
 
-	case strings.Contains(userAgent, "android"):
+	case hasToken(userAgent, "android"):
 		if isMobile {
 			return BrowserInfo{IsAndroid: true, IsPhone: true, Device: "phone", Description: "Android Phone"}
 		}
@@ -65,7 +65,7 @@ func sniffDevice(userAgent string) BrowserInfo {
 
 	// Generic desktop Linux. Must come AFTER android and cros, since those
 	// platforms also carry "linux" in their user agents.
-	case strings.Contains(userAgent, "linux"):
+	case hasToken(userAgent, "linux"):
 		return BrowserInfo{IsLinux: true, IsDesktop: true, Device: "desktop", Description: "Linux PC"}
 
 	default:
@@ -82,10 +82,51 @@ func sniffBrowser(userAgent string) string {
 	// before chrome; chrome carries "safari" and is matched before safari.
 
 	for _, browser := range browsers {
-		if strings.Contains(userAgent, browser.keyword) {
+		if hasToken(userAgent, browser.keyword) {
 			return browser.name
 		}
 	}
 
 	return "Unknown"
+}
+
+// hasToken returns TRUE if the user agent contains the keyword at the start of a word.
+func hasToken(userAgent string, keyword string) bool {
+
+	// Only the character *before* a match is examined, never the one after, because
+	// every keyword here is a prefix: "edg" must still match "edg/", "edge/", and
+	// "edgios/", and "opr" must still match "opr/".
+
+	for offset := 0; offset < len(userAgent); {
+
+		// Find the next occurrence of the keyword.
+		index := strings.Index(userAgent[offset:], keyword)
+
+		if index < 0 {
+			return false
+		}
+
+		start := offset + index
+
+		// RULE: A keyword buried inside a longer word is not a match. Plain substring
+		// matching misreads "Microsoft" as ChromeOS (mi-CROS-oft), "Knowledge" as
+		// Edge, "Proprietary" as Opera, and "WikiPad" as an iPad.
+		if (start == 0) || !isLetter(userAgent[start-1]) {
+			return true
+		}
+
+		// Otherwise, resume the search just past this false match.
+		offset = start + 1
+	}
+
+	return false
+}
+
+// isLetter returns TRUE if the character is an ASCII letter.
+func isLetter(character byte) bool {
+
+	// Both cases are tested because hasToken accepts any string; the sniffers
+	// happen to lowercase their input first, but the helper does not require it.
+
+	return ((character >= 'a') && (character <= 'z')) || ((character >= 'A') && (character <= 'Z'))
 }

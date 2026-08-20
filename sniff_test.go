@@ -124,7 +124,7 @@ func TestUserAgent_Devices(t *testing.T) {
 	})
 }
 
-// TestUserAgent_MacintoshBeforeWindows confirms branch ordering: a string that
+// TestUserAgent_MacintoshWinsOverWindows confirms branch ordering: a string that
 // contains both "macintosh" and "windows" is reported as a Macintosh, because
 // the Macintosh check comes first. (Safari on Mac reports "Macintosh".)
 func TestUserAgent_MacintoshWinsOverWindows(t *testing.T) {
@@ -301,6 +301,91 @@ func TestSniffBrowser(t *testing.T) {
 	check("Vivaldi wins over Chrome", "mozilla/5.0 (windows nt 10.0; win64; x64) applewebkit/537.36 (khtml, like gecko) chrome/110.0.0.0 safari/537.36 vivaldi/5.7.2921.63", "Vivaldi")
 	check("Opera OPR wins over Chrome", "mozilla/5.0 (windows nt 10.0; win64; x64) applewebkit/537.36 (khtml, like gecko) chrome/110.0.0.0 safari/537.36 opr/96.0.0.0", "Opera")
 	check("Unknown", "some random string", "Unknown")
+}
+
+// TestUserAgent_KeywordBuriedInsideWord guards against a regression: keywords
+// only match at the start of a word, so a keyword buried inside a longer word
+// must not classify the device or the browser.
+func TestUserAgent_KeywordBuriedInsideWord(t *testing.T) {
+
+	// Every string below is one that plain substring matching got wrong. The
+	// offending fragment is named in each case so nobody "simplifies" hasToken
+	// back into strings.Contains and reopens the bug.
+
+	check := func(name string, userAgent string, expectedDescription string, expectedBrowser string) {
+		t.Run(name, func(t *testing.T) {
+			result := UserAgent(userAgent)
+			assert.Equal(t, expectedDescription, result.Description)
+			assert.Equal(t, expectedBrowser, result.Browser)
+		})
+	}
+
+	// "Microsoft" contains "cros" (mi-CROS-oft), and Microsoft ships plenty of
+	// agents that never mention Windows.
+	check("Microsoft is not ChromeOS", "Microsoft-WebDAV-MiniRedir/10.0.19043", "Unrecognized Device", "Unknown")
+	check("Microsoft Office is not ChromeOS", "Microsoft Office Word 2014", "Unrecognized Device", "Unknown")
+
+	// The worst case: a real Android phone UA with a Microsoft app token appended
+	// used to lose IsAndroid *and* its phone classification, reporting a ChromeOS
+	// desktop instead.
+	t.Run("Android phone survives a Microsoft token", func(t *testing.T) {
+		result := UserAgent("Mozilla/5.0 (Linux; Android 13; SM-S901B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Mobile Safari/537.36 Microsoft Teams/1.5")
+		assert.Equal(t, "phone", result.Device)
+		assert.True(t, result.IsAndroid)
+		assert.False(t, result.IsChromeOS, "a Microsoft token must not make this ChromeOS")
+	})
+
+	// "Knowledge" and "Sledge" bury "edg" inside a longer word.
+	check("Knowledge is not Edge", "Mozilla/5.0 (compatible; KnowledgeBot/1.0; +http://example.com/bot)", "Unrecognized Device", "Unknown")
+	check("Sledge is not Edge", "SledgeHammer/2.1", "Unrecognized Device", "Unknown")
+
+	// KNOWN LIMITATION: the word-boundary rule cannot help when a foreign token
+	// merely *starts* with a browser keyword. "Edgio" is still read as Edge, and
+	// tightening that would break "EdgiOS", which is real Edge. Pinned so the
+	// behavior is a documented choice rather than a surprise.
+	check("Edgio is still misread as Edge", "Mozilla/5.0 (compatible; Edgio-Prefetch/1.0)", "Unrecognized Device", "Edge")
+
+	// "Proprietary" contains "opr".
+	check("Proprietary is not Opera", "Mozilla/5.0 (compatible; Proprietary-Crawler/1.0)", "Unrecognized Device", "Unknown")
+
+	// "WikiPad" contains "ipad".
+	check("WikiPad is not an iPad", "WikiPad/1.0", "Unrecognized Device", "Unknown")
+
+	// The flip side of the rule: the keywords are prefixes, so a keyword followed
+	// by more letters still matches. Only the character BEFORE a match is examined.
+	check("EdgiOS still matches Edge", "Mozilla/5.0 (iPhone; CPU iPhone OS 16_3 like Mac OS X) AppleWebKit/605.1.15 EdgiOS/110.0.1587.60 Mobile/15E148 Safari/604.1", "iPhone", "Edge")
+	check("legacy Edge still matches Edge", "Mozilla/5.0 (Windows NT 10.0) AppleWebKit/537.36 Chrome/52.0 Safari/537.36 Edge/15.15254", "Windows PC", "Edge")
+}
+
+// TestHasToken exercises the word-boundary matcher directly, including the
+// rescan path that steps past a match buried inside a longer word.
+func TestHasToken(t *testing.T) {
+
+	check := func(name string, userAgent string, keyword string, expected bool) {
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, expected, hasToken(userAgent, keyword))
+		})
+	}
+
+	check("match at start of string", "cros x86_64", "cros", true)
+	check("match after a space", "x11; cros x86_64", "cros", true)
+	check("match after punctuation", "(macintosh;", "macintosh", true)
+	check("match after a digit", "10mobile", "mobile", true)
+	check("keyword is a prefix of a longer word", "edgios/110", "edg", true)
+
+	check("buried inside a word", "microsoft", "cros", false)
+	check("buried, no later match", "proprietary", "opr", false)
+	check("absent entirely", "some random crawler", "firefox", false)
+	check("empty user agent", "", "cros", false)
+	check("keyword longer than user agent", "cro", "cros", false)
+
+	// The first "opr" is buried in "proprietary"; the second one is a real token,
+	// so the scan must continue past the false match rather than give up.
+	check("rescans past a false match", "proprietary opr/96.0.0.0", "opr", true)
+
+	// hasToken does not require its input to be lowercased.
+	check("uppercase input", "X11; CrOS x86_64", "CrOS", true)
+	check("uppercase buried inside a word", "Microsoft", "cros", false)
 }
 
 // FuzzUserAgent ensures UserAgent never panics on arbitrary input. UserAgent
