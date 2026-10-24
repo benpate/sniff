@@ -415,5 +415,67 @@ func FuzzUserAgent(f *testing.F) {
 
 		// Description should always be populated.
 		assert.NotEmpty(t, result.Description)
+
+		// Exactly one device flag is set, and it matches the Device string.
+		assert.Equal(t, result.Device == "desktop", result.IsDesktop, "input %q", userAgent)
+		assert.Equal(t, result.Device == "tablet", result.IsTablet, "input %q", userAgent)
+		assert.Equal(t, result.Device == "phone", result.IsPhone, "input %q", userAgent)
+
+		// At most one platform flag is set.
+		platforms := 0
+		for _, flag := range []bool{result.IsWindows, result.IsMacintosh, result.IsIOS, result.IsAndroid, result.IsChromeOS, result.IsLinux} {
+			if flag {
+				platforms++
+			}
+		}
+		assert.LessOrEqual(t, platforms, 1, "input %q", userAgent)
+	})
+}
+
+// TestIsLetter verifies the ASCII letter ranges, including the characters just outside them.
+func TestIsLetter(t *testing.T) {
+
+	for _, character := range []byte("azAZmM") {
+		assert.True(t, isLetter(character), "character %q", character)
+	}
+
+	for _, character := range []byte("@[`{09 -/_;(") {
+		assert.False(t, isLetter(character), "character %q", character)
+	}
+
+	// Bytes of a multi-byte UTF-8 character are never letters, so "émobile" still has a "mobile" token.
+	for _, character := range []byte("é") {
+		assert.False(t, isLetter(character), "byte %#x", character)
+	}
+}
+
+// FuzzHasToken checks hasToken against a plain reference: some occurrence of the keyword
+// starts the string or follows a byte that is not an ASCII letter.
+func FuzzHasToken(f *testing.F) {
+
+	f.Add("proprietary opr/96.0", "opr")
+	f.Add("microsoft", "cros")
+	f.Add("x11; cros x86_64", "cros")
+	f.Add("", "")
+	f.Add("abc", "")
+	f.Add("éedg/110", "edg")
+
+	f.Fuzz(func(t *testing.T, userAgent string, keyword string) {
+
+		expected := false
+
+		for index := 0; index < len(userAgent); index++ {
+
+			if !strings.HasPrefix(userAgent[index:], keyword) {
+				continue
+			}
+
+			if (index == 0) || !isLetter(userAgent[index-1]) {
+				expected = true
+				break
+			}
+		}
+
+		assert.Equal(t, expected, hasToken(userAgent, keyword), "userAgent %q, keyword %q", userAgent, keyword)
 	})
 }

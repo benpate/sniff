@@ -62,8 +62,8 @@ func TestIsDesktop(t *testing.T) {
 	check("lowercase iphone", "mozilla/5.0 (iphone; cpu iphone os 15_0)", false)
 }
 
-// FuzzIsMobile ensures IsMobile never panics on arbitrary input and stays
-// consistent with the documented keyword matching.
+// FuzzIsMobile verifies that IsMobile and IsDesktop agree with UserAgent and with each other:
+// every device is either mobile or desktop, never both and never neither.
 func FuzzIsMobile(f *testing.F) {
 
 	f.Add("")
@@ -72,8 +72,13 @@ func FuzzIsMobile(f *testing.F) {
 	f.Add("Android")
 	f.Add("Mozilla/5.0 (Macintosh)")
 
-	f.Fuzz(func(_ *testing.T, userAgent string) {
-		// Must not panic; the result is a plain bool.
-		_ = IsMobile(userAgent)
+	f.Fuzz(func(t *testing.T, userAgent string) {
+
+		info := UserAgent(userAgent)
+		isMobile := IsMobile(userAgent)
+
+		assert.Equal(t, info.IsPhone || info.IsTablet, isMobile, "input %q", userAgent)
+		assert.Equal(t, info.IsDesktop, IsDesktop(userAgent), "input %q", userAgent)
+		assert.NotEqual(t, isMobile, IsDesktop(userAgent), "input %q", userAgent)
 	})
 }
